@@ -1,47 +1,55 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
+const studentModel = require("./studentSchema");
+
 const app = express();
 
-//data base
-const studentDb = [];
+mongoose.connect(
+  "mongodb+srv://codetrain:zZfS318E8O6m6UzM@cluster0.kfmkaxh.mongodb.net/?retryWrites=true&w=majority"
+);
 
-//model for students
-
-class StudentsModel {
-  constructor(name, age, gen, email) {
-    this.name = name;
-    this.age = age;
-    this.gen = gen;
-    this.email = email;
-  }
-
-  save() {
-    studentDb.push(this);
-    return this;
-  }
-
-  static all() {
-    return studentDb;
-  }
-}
-
-// controllers
-
+//controller
 //create student controller
 const createNewStudent = (req, res) => {
   const { name, age, gen, email } = req.body;
 
-  const newStudent = new StudentsModel(name, age, gen, email);
-  newStudent.save();
+  const model = new studentModel({ name, age, gen, email });
 
-  res.send({ message: "successful", student: newStudent });
+  model.save();
+
+  res.send({ message: "successful", student: model });
 };
 
 // retrive all students
-const getAllStudents = (req, res) => {
-  const getStudents = StudentsModel.all();
+const getAllStudents = async (req, res, next) => {
+  const model = await studentModel.find();
 
-  res.send({ message: "successful", student: getStudents });
+  res.send({ message: "successful", student: model });
+};
+// update all students
+const updateStudents = async (req, res, next) => {
+  // const model = await studentModel.findByIdAndUpdate(
+  //   "6449030a571a8c22b92801b5",
+  //   { age: 24 }
+  // );
+  const model = await studentModel.findOneAndUpdate(
+    { name: "Esther " },
+    { age: 24 }
+  );
+
+  res.send({ message: "successful", student: model });
+};
+// delete all students
+const deleteStudents = async (req, res, next) => {
+  // const model = await studentModel.findByIdAndRemove(
+  //   "64490496c7bac07e2c9664e6"
+  // );
+  const model = await studentModel.findByIdAndDelete(
+    "6449030a571a8c22b92801b5"
+  );
+
+  res.send({ message: "successful", student: model });
 };
 
 //middlewares
@@ -50,6 +58,8 @@ app.use(bodyParser.json());
 
 app.post("/create", createNewStudent);
 app.get("/get-all-students", getAllStudents);
+app.put("/update-students", updateStudents);
+app.delete("/delete-students", deleteStudents);
 
 app.listen(5002, () => {
   console.log("Server running on port 5002");
