@@ -1,5 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const studentModel = require("./studentSchema");
 const userModel = require("./usermodel");
@@ -64,18 +66,57 @@ const createUser = async (req, res) => {
   res.send({ message: "successful", data: user });
 };
 
+//login user
+const logInUser = async (req, res, next) => {
+  const { email, password } = req.body;
+
+  const user = await userModel.findOne({ email });
+  if (!user) {
+    return res.send({ message: "unsuccessful", data: "Pls signup to login" });
+  }
+  const isPassword = bcrypt.compareSync(password, user.password);
+
+  if (!isPassword) {
+    return res.send({
+      message: "unsuccessful",
+      data: "Pls enter valid credentials",
+    });
+  }
+  var token = jwt.sign({ id: user._id }, "i love coding");
+
+  res
+    .cookie("token", token, { expiresIn: "1h" })
+    .send({ message: "successfull", data: { name: user.name } });
+};
+
+//protected route
+const protect = async (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.send({ message: "unsuccessful", data: "Pls login" });
+  }
+  //decode jwt token form cookies
+  const decoded = jwt.verify(token, "i love coding");
+  const user = await userModel.findById(decoded.id);
+  if (!user) {
+    return res.send({ message: "unsuccessful", data: "User not found" });
+  }
+  next();
+};
 //middlewares
 
 app.use(bodyParser.json());
+app.use(cookieParser());
 
 //routes for crud
-app.post("/create", createNewStudent);
+app.post("/create", protect, createNewStudent);
 app.get("/get-all-students", getAllStudents);
-app.put("/update-students", updateStudents);
-app.delete("/delete-students", deleteStudents);
+app.put("/update-students", protect, updateStudents);
+app.delete("/delete-students", protect, deleteStudents);
 
 //routes for auth
 app.post("/user", createUser);
+app.post("/login", logInUser);
 
 app.listen(5002, () => {
   console.log("Server running on port 5002");
