@@ -2,7 +2,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const studentModel = require("./studentSchema");
-
+const userModel = require("./usermodel");
+const bcrypt = require("bcryptjs");
 const app = express();
 
 mongoose.connect(
@@ -52,14 +53,29 @@ const deleteStudents = async (req, res, next) => {
   res.send({ message: "successful", student: model });
 };
 
+//user controller
+const createUser = async (req, res) => {
+  const { name, email, password } = req.body;
+
+  var salt = bcrypt.genSaltSync(10);
+  var hash = bcrypt.hashSync(password, salt);
+  const user = new userModel({ name, email, password: hash });
+  await user.save();
+  res.send({ message: "successful", data: user });
+};
+
 //middlewares
 
 app.use(bodyParser.json());
 
+//routes for crud
 app.post("/create", createNewStudent);
 app.get("/get-all-students", getAllStudents);
 app.put("/update-students", updateStudents);
 app.delete("/delete-students", deleteStudents);
+
+//routes for auth
+app.post("/user", createUser);
 
 app.listen(5002, () => {
   console.log("Server running on port 5002");
